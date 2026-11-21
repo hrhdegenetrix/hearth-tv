@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>DRM check</title>
+<style>body{margin:0;background:#17130f;color:#f3e9dc;font:36px/1.5 "DejaVu Sans",sans-serif;padding:96px 120px}
+b{color:#f2b35e} .ok{color:#6fbf73} .bad{color:#d9534f} small{color:#b9a894;font-size:26px}</style></head>
+<body><div><b>Hearth</b> — streaming check</div><div id="out">Checking…</div>
+<script>
+// Diagnostic: can this browser play Widevine (Prime/Max/Netflix-style) video?
+// Open it in the kiosk browser after Chromium's component updater has fetched
+// Widevine (docs/receiver.md § Widevine), on the Pi:
+//   curl -s -X POST localhost:8770/app -H "X-TV-Token: <token>" \
+//        -H 'Content-Type: application/json' -d '{"url": "http://127.0.0.1:8770/home/drm.html"}'
+// The tab's title becomes "DRM OK" or "DRM FAIL".
+(async () => {
+  const lines = [];
+  const cfg = [{ initDataTypes: ['cenc'],
+    videoCapabilities: [{ contentType: 'video/mp4; codecs="avc1.42E01E"', robustness: 'SW_SECURE_DECODE' }],
+    audioCapabilities: [{ contentType: 'audio/mp4; codecs="mp4a.40.2"', robustness: 'SW_SECURE_CRYPTO' }] }];
+  try {
+    const access = await navigator.requestMediaKeySystemAccess('com.widevine.alpha', cfg);
+    const keys = await access.createMediaKeys();
+    lines.push('<span class="ok">Widevine: available</span> <small>(' + access.keySystem + ', media keys created)</small>');
+  } catch (e) {
+    lines.push('<span class="bad">Widevine: not available</span> <small>' + e.name + ': ' + e.message + '</small>');
+  }
+  lines.push('<small>' + navigator.userAgent + '</small>');
+  document.getElementById('out').innerHTML = lines.join('<br>');
+  document.title = lines[0].includes('available</span>') && !lines[0].includes('not') ? 'DRM OK' : 'DRM FAIL';
+})();
+</script></body></html>

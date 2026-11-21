@@ -1,0 +1,22 @@
+# Hearth server (hearth/). Python 3.10 or newer (the code uses `str | None`).
+#   python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+# Tested with fastapi 0.116, uvicorn 0.35, httpx 0.28, pydantic 2.12, starlette 0.52.
+fastapi>=0.110
+uvicorn>=0.29
+httpx>=0.27
+pydantic>=2
+python-dotenv
+itsdangerous
+defusedxml          # podcast feeds are parsed with it (untrusted XML)
+Pillow              # podcast artwork is shrunk to 600 px JPEGs
+
+# yt-dlp: YouTube search and link casting run it as a program. Installing it in
+# this venv puts it next to the server's Python, where the server looks first.
+yt-dlp
+
+# Phone notifications for the disc drive (optional; push is simply off without them).
+pywebpush
+py-vapid
+
+# Tests: python -m pytest tests -q
+pytest

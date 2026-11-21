@@ -1,0 +1,1276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hearth</title>
+<meta name="viewport" content="width=1920, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap">
+<style>
+  /* Hearth palette: warm dark, an ember accent. Everything is CSS; no images. */
+  :root {
+    --bg: #17130f;
+    --card: #241d17;
+    --card-2: #2f261e;
+    --line: rgba(243, 233, 220, .08);
+    --text: #f3e9dc;
+    --muted: #b9a894;
+    --accent: #e8893a;
+    --accent-2: #f2b35e;
+    --danger: #d9534f;
+    --ok: #6fbf73;
+    --on-accent: #1d140c;                 /* text on an ember fill */
+    --glass: rgba(36, 29, 23, .86);
+    --shadow: rgba(0, 0, 0, .45);
+    --glow: rgba(232, 137, 58, .35);
+    --ember: linear-gradient(135deg, #e8893a, #f2b35e);
+    --display: "Fredoka", "DejaVu Sans", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; cursor: none; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, "DejaVu Sans", sans-serif;
+    color: var(--text);
+    background: radial-gradient(ellipse 120% 70% at 50% -12%, rgba(232, 137, 58, .32), transparent 62%),
+                radial-gradient(ellipse 60% 50% at 100% 110%, rgba(242, 179, 94, .10), transparent 70%),
+                var(--bg);
+  }
+
+  .screen { position: absolute; inset: 0; padding: 72px 110px; display: none; flex-direction: column; }
+  .screen.on { display: flex; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--glass);
+    border: 2px solid var(--line); border-radius: 24px; padding: 22px 40px;
+    box-shadow: 0 8px 30px var(--shadow);
+  }
+  .brand { font-family: var(--display); font-weight: 700; font-size: 64px; letter-spacing: -1.5px;
+           background: var(--ember); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .brand small { font-size: 34px; letter-spacing: -0.5px; margin-left: 14px; color: var(--muted);
+                 -webkit-text-fill-color: var(--muted); }
+  .clock { text-align: right; }
+  .clock .time { font-family: var(--display); font-weight: 700; font-size: 58px; color: var(--accent-2); letter-spacing: -1px; line-height: 1; }
+  .clock .date { font-size: 24px; color: var(--muted); margin-top: 6px; }
+
+  .tiles { margin: auto 0; display: flex; gap: 90px; justify-content: center; align-items: flex-start; }
+  .tile { display: flex; flex-direction: column; align-items: center; gap: 26px; position: relative; }
+  /* A tile is a CSS square: a tint (data-tint) and one big glyph. The rounded
+     square (20%) carries both the shadow and the focus ring. */
+  .tile .art { width: 400px; height: 400px; border-radius: 20%; display: flex; align-items: center; justify-content: center;
+               position: relative; overflow: hidden;
+               background: linear-gradient(150deg, var(--t1, #3a2c20), var(--t2, #241d17));
+               border: 2px solid var(--line); box-shadow: 0 14px 30px var(--shadow);
+               transition: transform .18s ease, box-shadow .18s ease; }
+  .tile .art::after { content: ""; position: absolute; inset: 0;
+                      background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, .16), transparent 55%); }
+  .tile .glyph { font-family: "DejaVu Sans", sans-serif; font-size: 190px; line-height: 1; color: var(--g, var(--text));
+                 text-shadow: 0 6px 24px rgba(0, 0, 0, .35); position: relative; z-index: 1; }
+  .tile[data-tint="youtube"] .art   { --t1: #a2341f; --t2: #4a170e; --g: #fbe2d4; }
+  .tile[data-tint="streaming"] .art { --t1: #e8893a; --t2: #7a3b17; --g: #fff1df; }
+  .tile[data-tint="library"] .art   { --t1: #5b4a8a; --t2: #241d3a; --g: #ece4ff; }
+  .tile[data-tint="prime"] .art     { --t1: #1f6f9a; --t2: #0d2a3c; --g: #dff3ff; }
+  .tile[data-tint="tubi"] .art      { --t1: #b3462c; --t2: #4f1b10; --g: #ffe7d8; }
+  .tile[data-tint="max"] .art       { --t1: #3a3fb0; --t2: #15173f; --g: #e4e6ff; }
+  .tile[data-tint="pluto"] .art     { --t1: #c0902a; --t2: #4d360c; --g: #fff3d6; }
+  .tile.focus .art { transform: translateY(-12px) scale(1.07);
+                     box-shadow: 0 0 0 8px var(--accent-2), 0 22px 44px var(--glow); }
+  .tile .label { font-family: var(--display); font-weight: 700; font-size: 54px; letter-spacing: -1px; color: var(--text);
+                 padding: 4px 30px; border-radius: 999px;
+                 transition: background .18s ease, color .18s ease; }
+  .tile.focus .label { background: var(--ember); color: var(--on-accent); box-shadow: 0 8px 22px var(--glow); }
+  .tile .sub { font-size: 22px; color: var(--muted); margin-top: -14px; }
+
+  #streaming .tiles { gap: 60px; }
+  #streaming .tile .art { width: 330px; height: 330px; }
+  #streaming .tile .glyph { font-size: 150px; }
+  #streaming .tile .label { font-size: 44px; }
+
+  /* Music: square album covers on the Jellyfin screen, and Now Playing */
+  .card.square { width: 300px; }
+  .card.square .poster { width: 300px; height: 300px; }
+  #music { padding-bottom: 44px; }
+  #music .np { flex: 1; display: flex; align-items: center; gap: 80px; padding: 0 30px; }
+  #music .np-art { flex: 0 0 auto; width: 600px; height: 600px; border-radius: 20%; overflow: hidden; position: relative;
+                   background: var(--ember); box-shadow: 0 22px 50px var(--shadow); }
+  #music .np-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  #music .np-art .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+                       font-size: 220px; color: rgba(29, 20, 12, .72); }
+  #music .np-meta { flex: 1; min-width: 0; background: var(--glass); border: 2px solid var(--line);
+                    border-radius: 36px; padding: 46px 56px; box-shadow: 0 10px 30px var(--shadow); }
+  #music .np-kicker { font-size: 26px; color: var(--muted); font-weight: 700; letter-spacing: .5px; }
+  #music .np-title { font-family: var(--display); font-weight: 700; font-size: 72px; letter-spacing: -1.5px; line-height: 1.05;
+                     color: var(--accent-2); margin-top: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #music .np-artist { font-family: var(--display); font-weight: 700; font-size: 42px; letter-spacing: -.5px; color: var(--text); margin-top: 16px;
+                      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #music .np-album { font-size: 30px; color: var(--muted); margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #music .np-bar { height: 14px; border-radius: 7px; background: rgba(243, 233, 220, .10); margin-top: 40px; overflow: hidden; }
+  #music .np-bar i { display: block; height: 100%; width: 0; border-radius: 7px; background: var(--ember); }
+  #music .np-times { display: flex; justify-content: space-between; font-size: 26px; color: var(--muted); margin-top: 10px; }
+  #music .np-paused { display: inline-block; margin-left: 16px; padding: 4px 18px; border-radius: 999px; background: var(--accent-2);
+                      color: var(--on-accent); font-size: 22px; vertical-align: middle; }
+  #music .np-next { font-size: 26px; color: var(--muted); margin-top: 26px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #music .np-next b { color: var(--text); }
+  /* The whole queue under the song: ▲ ▼ browse, OK plays the one picked */
+  #music .np.with-queue { gap: 60px; }
+  #music .np.with-queue .np-art { width: 500px; height: 500px; }
+  #music .np-side { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+  #music .np.with-queue .np-meta { padding: 28px 44px; }
+  #music .np.with-queue .np-title { font-size: 54px; margin-top: 8px; -webkit-line-clamp: 1; }
+  #music .np.with-queue .np-artist { font-size: 34px; margin-top: 8px; }
+  #music .np.with-queue .np-album { font-size: 24px; }
+  #music .np.with-queue .np-bar { margin-top: 20px; height: 12px; }
+  #music .np.with-queue .np-times { font-size: 22px; }
+  #music .np.with-queue .np-next { display: none; }
+  #music .np-queue { display: none; background: var(--glass); border: 2px solid var(--line);
+                     border-radius: 30px; padding: 14px 16px; box-shadow: 0 10px 30px var(--shadow); }
+  #music .np.with-queue .np-queue { display: block; }
+  #music .qrow { display: flex; gap: 18px; align-items: center; height: 50px; padding: 0 18px; border-radius: 14px;
+                 font-size: 24px; color: var(--text); }
+  #music .qrow .qn { width: 64px; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+  #music .qrow .qt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
+  #music .qrow .qa { flex: 0 1 36%; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+  #music .qrow .qd { width: 76px; text-align: right; color: var(--muted); flex: none; font-variant-numeric: tabular-nums; }
+  #music .qrow.played { opacity: .55; }
+  #music .qrow.now { background: var(--ember); color: var(--on-accent); opacity: 1; }
+  #music .qrow.now .qn, #music .qrow.now .qa, #music .qrow.now .qd { color: rgba(29, 20, 12, .78); }
+  #music .qrow.cursor { box-shadow: 0 0 0 4px var(--bg), 0 0 0 8px var(--accent-2); }
+  #music .qrow.queued .qt::after, #list .lrow.queued .lt::after { content: ' · queued'; font-weight: 400; color: var(--muted); }
+
+  /* Now playing, docked in the header on every screen: ◀ from the first card
+     reaches it, OK goes back to the song */
+  .dock { position: fixed; top: 92px; right: 470px; z-index: 50; display: none; align-items: center; gap: 16px;
+          max-width: 600px; padding: 10px 22px 10px 10px; border-radius: 22px; background: var(--card-2);
+          border: 2px solid var(--line); box-shadow: 0 6px 18px var(--shadow); transition: transform .15s ease, box-shadow .15s ease; }
+  body.docked .dock { display: flex; }
+  body.docked .brand.long { max-width: 760px; }
+  .dock .dart { width: 76px; height: 76px; border-radius: 16px; overflow: hidden; flex: none; position: relative;
+                background: var(--ember); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font-size: 34px; }
+  .dock .dart img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .dock .dtext { min-width: 0; }
+  .dock .dkick { font-size: 18px; font-weight: 700; color: var(--accent-2); letter-spacing: 2px; }
+  .dock .dtitle { font-size: 26px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dock .dartist { font-size: 20px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dock.focus { transform: scale(1.05); background: var(--card); box-shadow: 0 0 0 6px var(--bg), 0 0 0 10px var(--accent-2), 0 14px 30px var(--glow); }
+
+  /* An album, a playlist or a station's list for today, as a page:
+     ▶ Play all · Shuffle · or OK on a song to start there; ▶ on a song opens its menu */
+  #list .lst { flex: 1; display: flex; gap: 60px; padding: 40px 30px 0; min-height: 0; }
+  #list .lst-side { flex: 0 0 420px; }
+  #list .lst-art { width: 420px; height: 420px; border-radius: 20%; overflow: hidden; position: relative;
+                   background: var(--ember); box-shadow: 0 18px 40px var(--shadow); }
+  #list .lst-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  #list .lst-art .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+                       font-size: 160px; color: rgba(29, 20, 12, .72); }
+  #list .lst-sub { margin-top: 26px; font-size: 30px; font-weight: 700; color: var(--text); }
+  #list .lst-count { margin-top: 8px; font-size: 24px; color: var(--muted); }
+  #list .lst-rows { flex: 1; min-width: 0; align-self: flex-start; background: var(--glass);
+                    border: 2px solid var(--line); border-radius: 30px; padding: 14px 16px; box-shadow: 0 10px 30px var(--shadow); }
+  #list .lrow { display: flex; gap: 18px; align-items: center; height: 54px; padding: 0 18px; border-radius: 14px; font-size: 25px; }
+  #list .lrow .ln { width: 56px; text-align: right; color: var(--muted); flex: none; font-variant-numeric: tabular-nums; }
+  #list .lrow .lt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
+  #list .lrow .la { flex: 0 1 34%; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+  #list .lrow .ld { width: 76px; text-align: right; color: var(--muted); flex: none; font-variant-numeric: tabular-nums; }
+  #list .lrow .lh { width: 30px; flex: none; color: var(--accent-2); }
+  #list .lrow.act .lt { color: var(--accent-2); }
+  #list .lrow.disliked { opacity: .45; }
+  #list .lrow.focus { background: var(--ember); color: var(--on-accent); opacity: 1; }
+  #list .lrow.focus .ln, #list .lrow.focus .la, #list .lrow.focus .ld, #list .lrow.focus .lh, #list .lrow.focus .lt { color: var(--on-accent); }
+
+  /* A song's menu: Play next, Add to queue, ♥, Not for me, Add to playlist */
+  .menu { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .55); display: flex; align-items: center; justify-content: center; }
+  .menu[hidden] { display: none; }
+  .menu .panel { min-width: 760px; max-width: 980px; background: var(--card); border: 3px solid var(--line); border-radius: 36px;
+                 padding: 40px 46px; box-shadow: 0 24px 60px rgba(0, 0, 0, .6); }
+  .menu .mtitle { font-family: var(--display); font-weight: 700; font-size: 44px; color: var(--accent-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .menu .msub { font-size: 24px; color: var(--muted); margin: 6px 0 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .menu .mopt { font-size: 30px; font-weight: 700; padding: 16px 26px; border-radius: 18px; color: var(--text); }
+  .menu .mopt.focus { background: var(--ember); color: var(--on-accent); }
+  .menu input { width: 100%; box-sizing: border-box; font-size: 32px; padding: 16px 22px; border-radius: 18px; border: 3px solid var(--accent);
+                margin-top: 10px; font-family: inherit; color: var(--text); background: var(--card-2); outline: none; }
+  .menu .mhint { font-size: 22px; color: var(--muted); margin-top: 18px; }
+
+  footer { display: flex; justify-content: space-between; align-items: center; font-size: 24px; color: var(--muted); }
+  footer b { font-weight: 700; color: var(--text); }
+
+  /* Jellyfin: shelves of posters, the focused shelf rides to the top */
+  #jellyfin, #show, #albums, #artists, #artist { padding-bottom: 44px; }
+  .brand.long { font-size: 56px; max-width: 1350px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .shelves { flex: 1; overflow: hidden; margin: 30px -24px 0; position: relative;
+             -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 110px), transparent);
+             mask-image: linear-gradient(to bottom, #000 calc(100% - 110px), transparent); }
+  .shelves-inner { transition: transform .28s ease; }
+  .shelf { padding-bottom: 18px; }
+  .shelf h2 { font-family: var(--display); font-weight: 700; font-size: 44px; letter-spacing: -.5px; color: var(--text); margin: 0 0 0 30px; }
+  .viewport { overflow: hidden; }
+  .row { display: flex; gap: 38px; align-items: flex-end; padding: 34px 24px 6px; position: relative; transition: transform .28s ease; }
+  .card { flex: 0 0 auto; width: 230px; }
+  .card.wide { width: 420px; }
+  /* No picture from the library: a CSS placeholder with the title on it */
+  .poster { position: relative; width: 230px; height: 345px; border-radius: 28px; overflow: hidden;
+            background: linear-gradient(160deg, #4a3626, var(--card-2) 60%, var(--card));
+            border: 2px solid var(--line); box-shadow: 0 12px 26px var(--shadow); transition: transform .18s ease, box-shadow .18s ease; }
+  .card.wide .poster { width: 420px; height: 236px; }
+  /* Radio stations and playlists: a kicker over the name */
+  .card.station .poster { background: linear-gradient(135deg, #f2b35e 0%, #c8642a 55%, #5a2c14 100%); }
+  .poster .kick { position: absolute; top: 24px; left: 0; right: 0; text-align: center; font-size: 19px; font-weight: 700;
+                  letter-spacing: 4px; color: rgba(255, 244, 230, .85); }
+  .card.episode .ph { font-size: 28px; }
+  .poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .poster .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 22px;
+                font-family: var(--display); font-weight: 700; font-size: 34px; letter-spacing: -.5px; color: var(--text); line-height: 1.1; }
+  .card.focus .poster { transform: translateY(-8px) scale(1.06);
+                        box-shadow: 0 0 0 8px var(--accent-2), 0 22px 44px var(--glow); }
+  .poster .bar { position: absolute; left: 16px; right: 16px; bottom: 16px; height: 9px; border-radius: 5px; background: rgba(23, 19, 15, .55); }
+  .poster .bar i { display: block; height: 100%; border-radius: 5px; background: var(--accent-2); box-shadow: 0 0 8px var(--glow); }
+  .poster .badge { position: absolute; top: 14px; right: 14px; min-width: 46px; height: 46px; padding: 0 12px; border-radius: 23px;
+                   background: var(--accent-2); color: var(--on-accent); font-weight: 700; font-size: 24px;
+                   display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px var(--shadow); }
+  .card .title { margin-top: 18px; font-size: 26px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                 padding: 0 4px; }
+  .card.focus .title { color: var(--accent-2); }
+  .notice { margin: auto; text-align: center; background: var(--glass); border: 2px solid var(--line); border-radius: 36px;
+            padding: 50px 80px; box-shadow: 0 10px 30px var(--shadow); }
+  .notice b { display: block; font-family: var(--display); font-weight: 700; font-size: 54px; color: var(--accent-2); letter-spacing: -1px; }
+  .notice span { display: block; font-size: 28px; color: var(--muted); margin-top: 12px; }
+  .detail { font-size: 28px; max-width: 1350px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .detail b { font-family: var(--display); font-weight: 700; font-size: 32px; letter-spacing: -.5px; margin-right: 6px; }
+
+  .chooser { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, .55); }
+  .chooser[hidden] { display: none; }
+  .chooser .panel { background: var(--card); border: 3px solid var(--line); border-radius: 40px; padding: 50px 70px; text-align: center;
+                    box-shadow: 0 24px 60px rgba(0, 0, 0, .6); max-width: 1300px; }
+  .chooser .ctitle { font-family: var(--display); font-weight: 700; font-size: 50px; letter-spacing: -1px; color: var(--accent-2);
+                     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chooser .choices { display: flex; gap: 40px; justify-content: center; margin-top: 40px; }
+  .chooser .choice { font-family: var(--display); font-weight: 700; font-size: 38px; letter-spacing: -.5px; padding: 22px 46px; border-radius: 999px;
+                     background: var(--card-2); color: var(--text); border: 3px solid var(--line); transition: all .15s ease; }
+  .chooser .choice.focus { background: var(--ember); color: var(--on-accent); border-color: var(--accent-2); transform: scale(1.06);
+                           box-shadow: 0 12px 30px var(--glow); }
+
+  .toast { position: fixed; left: 50%; bottom: 140px; transform: translateX(-50%); padding: 20px 36px; border-radius: 999px;
+           background: var(--ember); color: var(--on-accent); font-family: var(--display); font-weight: 700; font-size: 32px;
+           border: 3px solid var(--accent-2); box-shadow: 0 10px 30px var(--shadow); opacity: 0; transition: opacity .25s; }
+  .toast.on { opacity: 1; }
+  /* An Android app on its way, step by step with a running clock */
+  .droid { position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%); min-width: 760px; max-width: 1100px;
+           padding: 26px 40px 24px; border-radius: 28px; background: var(--card); color: var(--text);
+           border: 3px solid var(--accent); box-shadow: 0 14px 40px var(--shadow); font-family: var(--display); }
+  .droid[hidden] { display: none; }
+  .droid .head { display: flex; justify-content: space-between; align-items: baseline; font-size: 36px; font-weight: 800; margin-bottom: 14px; }
+  .droid .head .clock { font-size: 30px; opacity: .7; }
+  .droid .step { display: flex; align-items: center; gap: 16px; font-size: 27px; font-weight: 700; margin: 8px 0; }
+  .droid .step .mark { width: 34px; text-align: center; }
+  .droid .step .name { flex: 1; }
+  .droid .step .secs { opacity: .75; min-width: 70px; text-align: right; }
+  .droid .step.done { opacity: .55; }
+  .droid .step.failed .mark, .droid .step.failed .name { color: var(--danger); }
+  .droid .bar { height: 10px; border-radius: 6px; background: rgba(243, 233, 220, .10); margin: 2px 0 6px 50px; overflow: hidden; }
+  .droid .bar i { display: block; height: 100%; width: 0; background: var(--ember); transition: width .9s linear; }
+  .droid .bar.slow i { background: var(--danger); }
+  .droid .usual { font-size: 22px; opacity: .7; margin-left: 50px; }
+  .droid .note { font-size: 24px; margin-top: 12px; color: var(--accent-2); }
+  .droid .foot { font-size: 21px; opacity: .6; margin-top: 12px; }
+</style>
+</head>
+<body>
+<section class="screen on" id="home">
+  <header>
+    <div class="brand">Hearth</div>
+    <div class="clock"><div class="time" data-time>--:--</div><div class="date" data-date></div></div>
+  </header>
+  <div class="tiles">
+    <div class="tile" data-go="youtube" data-tint="youtube"><div class="art"><span class="glyph">▶</span></div><div class="label">YouTube</div></div>
+    <div class="tile" data-go="streaming" data-tint="streaming"><div class="art"><span class="glyph">✦</span></div><div class="label">Streaming</div></div>
+    <div class="tile" data-go="jellyfin" data-tint="library"><div class="art"><span class="glyph">❖</span></div><div class="label">Jellyfin</div></div>
+  </div>
+  <footer><div></div></footer>
+</section>
+
+<section class="screen" id="streaming">
+  <header>
+    <div class="brand">Streaming</div>
+    <div class="clock"><div class="time" data-time>--:--</div><div class="date" data-date></div></div>
+  </header>
+  <div class="tiles">
+    <div class="tile" data-pkg="com.amazon.avod.thirdpartyclient" data-tint="prime"><div class="art"><span class="glyph">★</span></div><div class="label">Prime Video</div></div>
+    <div class="tile" data-app="tubi" data-tint="tubi"><div class="art"><span class="glyph">▲</span></div><div class="label">Tubi</div></div>
+    <div class="tile" data-pkg="com.wbd.stream" data-tint="max"><div class="art"><span class="glyph">●</span></div><div class="label">Max</div></div>
+    <div class="tile" data-app="pluto" data-tint="pluto"><div class="art"><span class="glyph">◐</span></div><div class="label">Pluto TV</div></div>
+  </div>
+  <footer><div>Back returns home</div></footer>
+</section>
+
+<section class="screen" id="jellyfin">
+  <header>
+    <div class="brand">Jellyfin</div>
+    <div class="clock"><div class="time" data-time>--:--</div><div class="date" data-date></div></div>
+  </header>
+  <div class="shelves"><div class="shelves-inner"></div></div>
+  <footer><div class="detail" data-detail></div></footer>
+</section>
+
+<section class="screen" id="music">
+  <header>
+    <div class="brand">Now Playing</div>
+    <div class="clock"><div class="time" data-time>--:--</div><div class="date" data-date></div></div>
+  </header>
+  <div class="np">
+    <div class="np-art"><div class="ph">♪</div></div>
+    <div class="np-side">
+      <div class="np-meta">
+        <div class="np-kicker"></div>
+        <div class="np-title"></div>
+        <div class="np-artist"></div>
+        <div class="np-album"></div>
+        <div class="np-bar"><i></i></div>
+        <div class="np-times"><span class="np-pos">0:00</span><span class="np-dur">0:00</span></div>
+        <div class="np-next"></div>
+      </div>
+      <div class="np-queue"></div>
+    </div>
+  </div>
+  <footer><div class="np-keys">◀ ▶ skip · OK pauses · Back leaves it playing</div></footer>
+</section>
+
+<!-- The whole music collection, A to Z, one shelf per letter -->
+<section class="screen" id="albums">
+  <header>
+    <div class="brand">Albums<small>A to Z</small></div>
+    <div class="clock"><div class="time" data-time>--:--</div><div class="date" data-date></div></div>
+  </header>
+  <div class="shelves"><div class="shelves-inner"></div></div>
+  <footer><div class="detail" data-detail></div></footer>
+</section>
+
+<section class="screen" id="artists">
+  <header>
+    <div class="brand">Artists<small>A to Z</small></div>
+    <div class="clock"><div class="time" data-time>--:--</div><div class="date" data-date></div></div>
+  </header>
+  <div class="shelves"><div class="shelves-inner"></div></div>
+  <footer><div class="detail" data-detail></div></footer>
+</section>
+
+<section class="screen" id="artist">
+  <header>
+    <div class="brand long" data-artist-name></div>
+    <div class="clock"><div class="time" data-time>--:--</div><div class="date" data-date></div></div>
+  </header>
+  <div class="shelves"><div class="shelves-inner"></div></div>
+  <footer><div class="detail" data-detail></div></footer>
+</section>
+
+<!-- An album, a playlist, or a station's list for today -->
+<section class="screen" id="list">
+  <header>
+    <div class="brand long" data-list-name></div>
+    <div class="clock"><div class="time" data-time>--:--</div><div class="date" data-date></div></div>
+  </header>
+  <div class="lst">
+    <div class="lst-side"><div class="lst-art"><div class="ph">♪</div></div><div class="lst-sub"></div><div class="lst-count"></div></div>
+    <div class="lst-rows"></div>
+  </div>
+  <footer><div class="detail" data-detail></div></footer>
+</section>
+
+<!-- One podcast's episodes, a shelf per year -->
+<section class="screen" id="podcast">
+  <header>
+    <div class="brand long" data-podcast-name></div>
+    <div class="clock"><div class="time" data-time>--:--</div><div class="date" data-date></div></div>
+  </header>
+  <div class="shelves"><div class="shelves-inner"></div></div>
+  <footer><div class="detail" data-detail></div></footer>
+</section>
+
+<section class="screen" id="show">
+  <header>
+    <div class="brand long" data-show-name></div>
+    <div class="clock"><div class="time" data-time>--:--</div><div class="date" data-date></div></div>
+  </header>
+  <div class="shelves"><div class="shelves-inner"></div></div>
+  <footer><div class="detail" data-detail></div></footer>
+</section>
+
+<div class="chooser" id="chooser" hidden>
+  <div class="panel">
+    <div class="ctitle"></div>
+    <div class="choices"><div class="choice" data-c="resume"></div><div class="choice" data-c="start">Start over</div></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="droid" id="droid" hidden></div>
+
+<div class="dock" id="dock"><div class="dart">♪</div><div class="dtext"><div class="dkick">NOW PLAYING</div>
+  <div class="dtitle"></div><div class="dartist"></div></div></div>
+
+<div class="menu" id="songmenu" hidden><div class="panel">
+  <div class="mtitle"></div><div class="msub"></div><div class="mopts"></div>
+  <input class="mname" placeholder="Type a name on the remote's keyboard" hidden>
+  <div class="mhint"></div>
+</div></div>
+
+<script>
+  const screens = {};
+  ['home', 'streaming', 'jellyfin', 'show', 'music', 'albums', 'artists', 'artist', 'podcast', 'list'].forEach((k) => screens[k] = document.getElementById(k));
+  const GRID = { jellyfin: true, show: true, albums: true, artists: true, artist: true, podcast: true };   // poster shelves; the rest are tile rows
+  const AZ = { albums: true, artists: true };    // one shelf per letter: rows wrap, a typed letter jumps
+  const BACK = { show: 'jellyfin', albums: 'jellyfin', artists: 'jellyfin', artist: 'artists', podcast: 'jellyfin' };
+  let current = 'home';
+  const focusIdx = { home: 0, streaming: 0 };
+
+  function tiles() { return [...screens[current].querySelectorAll('.tile')]; }
+  function paint() {
+    if (GRID[current]) { paintGrid(current); return; }
+    tiles().forEach((t, i) => t.classList.toggle('focus', i === focusIdx[current]));
+  }
+  // The remote's Home button (receiver /home_screen): back to the main home screen.
+  function goHome() {
+    if (!chooser.el.hidden) closeChooser();
+    if (OPENING.name) {     // Home stops an Android app that's still opening
+      OPENING.name = null;
+      clearTimeout(toastTimer); document.getElementById('toast').classList.remove('on');
+      droidShow(null);
+    }
+    NP.track = null; NP.back = 'home';
+    show('home');
+    return true;
+  }
+  function show(name) {
+    current = name;
+    Object.entries(screens).forEach(([k, el]) => el.classList.toggle('on', k === name));
+    DOCK.focus = false; paintDock();
+    paint();
+    try { history.replaceState(null, '', name === 'home' ? '/home' : '/home#' + (GRID[name] ? 'jellyfin' : name)); } catch (e) {}
+  }
+
+  let toastTimer;
+  // An Android app on its way from a Streaming tile; status() rewords the note
+  // when Android has to start or restart under it (~70 s on 2026-10-15).
+  const OPENING = { name: null, state: null };
+  function toast(msg, ms = 2600) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('on');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), ms);
+  }
+
+  async function post(path, body) {
+    const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    return r.json().catch(() => ({}));
+  }
+
+  async function activate(tile) {
+    if (tile.dataset.go === 'streaming') {
+      show('streaming');
+      post('/local/android/prepare', {});    // Android (if set up) gets ready while an app is chosen
+      return;
+    }
+    if (tile.dataset.go === 'jellyfin') { openLibrary(); return; }
+    if (tile.dataset.go === 'youtube') { toast('Opening YouTube…'); post('/local/open', { name: 'youtube' }); return; }
+    if (tile.dataset.app) {   // a website app (Tubi, Pluto TV), full screen in the browser
+      toast('Opening ' + tile.querySelector('.label').textContent + '…');
+      post('/local/open', { name: tile.dataset.app });
+      return;
+    }
+    if (tile.dataset.pkg) {
+      // An Android app can take a minute (longer if Android has to restart),
+      // so the note stays until the receiver answers. Without Android on this
+      // box the receiver opens the app's website instead.
+      const name = tile.querySelector('.label').textContent;
+      toast('Opening ' + name + '…', 180000);
+      OPENING.name = name; OPENING.state = 'opening';
+      post('/local/open_android', { package: tile.dataset.pkg }).then((r) => {
+        const mine = OPENING.name === name;
+        OPENING.name = null;
+        if (!mine) return;      // Home came first, and already cleared the note
+        if (r && r.ok === false) toast(name + " didn't open. Try it again.", 8000);
+        else { clearTimeout(toastTimer); document.getElementById('toast').classList.remove('on'); }
+      });
+    }
+  }
+
+  // ------------------------------------------------------------------ Jellyfin
+  const LIB = { items: {}, series: null, artist: null, podcast: null, songs: 0, music: '' };   // key -> card, the open show / artist / podcast
+  const pos = { jellyfin: { r: 0, c: [] }, show: { r: 0, c: [] }, albums: { r: 0, c: [] }, artists: { r: 0, c: [] }, artist: { r: 0, c: [] },
+                podcast: { r: 0, c: [] } };
+
+  function esc(v) { return String(v ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch])); }
+  function clock(sec) {
+    sec = Math.round(sec || 0);
+    const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+    return h ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
+  }
+  function length(sec) { const m = Math.round((sec || 0) / 60); return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`; }
+  function epTag(it) { return (it.season != null ? `S${it.season} ` : '') + (it.episode != null ? `E${it.episode}` : ''); }
+
+  function card(it, opts = {}) {
+    const key = opts.key || it.id;
+    LIB.items[key] = it;
+    const wide = !!opts.wide;
+    // an episode in Continue watching wears its show's poster
+    const imgId = opts.seriesPoster && it.series_id ? it.series_id : (it.has_image ? it.id : null);
+    const src = opts.img !== undefined ? opts.img : (imgId ? `/local/jf_image/${imgId}?w=${wide ? 520 : 360}` : null);
+    const img = src ? `<img src="${src}" alt="" loading="lazy" onerror="this.remove()">` : '';
+    const kick = opts.kicker ? `<div class="kick">${esc(opts.kicker)}</div>` : '';
+    const phText = it.type === 'Episode' && wide ? (it.episode != null ? 'Episode ' + it.episode : it.name) : (it.series || it.name);
+    const pct = it.resume && it.runtime ? Math.min(100, it.resume / it.runtime * 100) : 0;
+    const bar = pct ? `<div class="bar"><i style="width:${pct.toFixed(1)}%"></i></div>` : '';
+    let badge = '';
+    if (it.type === 'Series' && it.unplayed) badge = `<div class="badge">${it.unplayed}</div>`;
+    else if (it.type === 'PodcastShow' && it.new) badge = `<div class="badge">${it.new}</div>`;
+    else if (it.played) badge = '<div class="badge">✓</div>';
+    let title = it.name;
+    if (it.type === 'Episode') title = opts.seriesPoster ? `${it.series || ''} · ${epTag(it)}` : (it.episode != null ? `${it.episode}. ${it.name}` : it.name);
+    const sq = (opts.square ? ' square' : '') + (opts.cls ? ' ' + opts.cls : '');
+    return `<div class="card${wide ? ' wide' : ''}${sq}" data-id="${key}"><div class="poster">${kick}<div class="ph">${esc(phText)}</div>${img}${bar}${badge}</div>`
+         + `<div class="title">${esc(title)}</div></div>`;
+  }
+  function shelf(title, html, letter) {
+    const at = letter ? ` data-letter="${esc(letter)}"` : '';
+    return `<div class="shelf"${at}><h2>${esc(title)}</h2><div class="viewport"><div class="row">${html}</div></div></div>`;
+  }
+  function notice(name, big, small) {
+    screens[name].querySelector('.shelves-inner').innerHTML = `<div class="notice"><b>${esc(big)}</b><span>${esc(small)}</span></div>`;
+    screens[name].querySelector('.shelves-inner').style.transform = '';
+    screens[name].querySelector('[data-detail]').textContent = '';
+  }
+  function focusedId(name) { const c = screens[name].querySelector('.card.focus'); return c ? c.dataset.id : null; }
+  function focusOn(name, id) {          // put the focus back on a card after a re-render
+    if (!id) return;
+    screens[name].querySelectorAll('.shelf').forEach((sh, r) => {
+      const i = [...sh.querySelectorAll('.card')].findIndex((c) => c.dataset.id === id);
+      if (i >= 0 && pos[name].r === r) pos[name].c[r] = i;
+    });
+  }
+
+  async function getJSON(url) {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(r.status);
+    return r.json();
+  }
+
+  async function openLibrary(quiet) {
+    if (!quiet) { show('jellyfin'); if (!screens.jellyfin.querySelector('.shelf')) notice('jellyfin', 'Loading…', 'Fetching posters from the library'); }
+    let data;
+    try { data = await getJSON('/local/library'); }
+    catch (e) { if (!quiet) notice('jellyfin', "Jellyfin isn't answering", 'Try again in a moment'); return; }
+    const keep = focusedId('jellyfin');
+    let html = '';
+    if (data.continue.length) html += shelf('Continue watching', data.continue.map((it) => card(it, { seriesPoster: true })).join(''));
+    if (data.movies.length) html += shelf('Movies', data.movies.map((it) => card(it)).join(''));
+    if (data.shows.length) html += shelf('Shows', data.shows.map((it) => card(it)).join(''));
+    if ((data.albums || []).length) {
+      LIB.songs = data.songs || 0;
+      const nav = [];
+      if (NP.track) nav.push({ id: 'now-playing', type: 'NowPlaying', name: '♪ Now playing', track: NP.track });
+      nav.push({ id: 'shuffle-all-music', type: 'ShuffleAll', name: '♥ Shuffle all my music' },
+                   { id: 'music-albums', type: 'MusicNav', go: 'albums', name: 'Albums A to Z' },
+                   { id: 'music-artists', type: 'MusicNav', go: 'artists', name: 'Artists A to Z' });
+      html += shelf('Music', nav.concat(data.albums).map((it) => card(it, { square: true })).join(''));
+    }
+    // radio stations, playlists (made here, and any from an old iTunes library), podcasts
+    if ((data.stations || []).length)
+      html += shelf('Radio', data.stations.map((it) => card(it, { square: true, kicker: 'RADIO', cls: 'station', key: 'st-' + it.id,
+        img: it.art ? '/local/station_art?station=' + encodeURIComponent(it.id) : undefined })).join(''));
+    if ((data.mine || []).length)
+      html += shelf('My playlists', data.mine.map((it) => card(it, { square: true, kicker: 'MY PLAYLIST', cls: 'station', key: 'my-' + it.id })).join(''));
+    if ((data.playlists || []).length)
+      html += shelf('Your iTunes playlists', data.playlists.map((it) => card(it, { square: true, kicker: 'PLAYLIST', cls: 'station', key: 'pl-' + it.id })).join(''));
+    if ((data.podcasts || []).length)
+      html += shelf('Podcasts', data.podcasts.map((it) => card({ ...it, name: it.title },
+        { square: true, img: it.has_art ? '/local/podcast_art/' + it.id : null, key: 'pc-' + it.id })).join(''));
+    if (!html) { notice('jellyfin', 'Nothing here yet', "Add movies and shows from the remote's Library tab"); return; }
+    screens.jellyfin.querySelector('.shelves-inner').innerHTML = html;
+    focusOn('jellyfin', keep);
+    if (current === 'jellyfin') paint();
+  }
+
+  async function openShow(series, quiet) {
+    LIB.series = series;
+    screens.show.querySelector('[data-show-name]').textContent = series.name;
+    if (!quiet) { pos.show = { r: 0, c: [] }; notice('show', 'Loading…', series.name); show('show'); }
+    let data;
+    try { data = await getJSON('/local/show/' + series.id); }
+    catch (e) { if (!quiet) notice('show', "Jellyfin isn't answering", 'Try again in a moment'); return; }
+    if (LIB.series !== series) return;
+    const keep = focusedId('show');
+    const seasons = new Map();
+    data.episodes.forEach((ep) => {
+      const k = ep.season == null ? -1 : ep.season;
+      if (!seasons.has(k)) seasons.set(k, []);
+      seasons.get(k).push(ep);
+    });
+    if (!seasons.size) { notice('show', 'No episodes yet', series.name); return; }
+    let html = '';
+    seasons.forEach((eps, k) => {
+      html += shelf(k === 0 ? 'Specials' : k === -1 ? 'Episodes' : 'Season ' + k, eps.map((ep) => card(ep, { wide: true })).join(''));
+    });
+    screens.show.querySelector('.shelves-inner').innerHTML = html;
+    if (keep) focusOn('show', keep);
+    else {   // land on the episode in progress, else the first unwatched one
+      const all = data.episodes;
+      const next = all.find((ep) => ep.resume) || all.find((ep) => !ep.played) || all[0];
+      [...seasons.values()].forEach((eps, r) => {
+        const i = eps.indexOf(next);
+        if (i >= 0) { pos.show.r = r; pos.show.c[r] = i; }
+      });
+    }
+    if (current === 'show') paint();
+  }
+
+  // Music A to Z: every album (compilations made whole, hearth/music_index.py) and every artist
+  async function openMusic(name, quiet) {
+    if (!quiet) { show(name); if (!screens[name].querySelector('.shelf')) notice(name, 'Loading…', 'Fetching your music'); }
+    let data, text;
+    try { const r = await fetch('/local/music_index'); if (!r.ok) throw new Error(r.status); text = await r.text(); data = JSON.parse(text); }
+    catch (e) { if (!quiet && !screens[name].querySelector('.shelf')) notice(name, "Jellyfin isn't answering", 'Try again in a moment'); return; }
+    LIB.songs = data.songs || LIB.songs;
+    if (text === LIB.music && screens.albums.querySelector('.shelf')) return;     // nothing new
+    LIB.music = text;
+    ['albums', 'artists'].forEach((k) => {
+      const list = k === 'albums' ? data.albums : data.artists;
+      const keep = focusedId(k);
+      const byLetter = new Map();
+      list.forEach((it) => { if (!byLetter.has(it.letter)) byLetter.set(it.letter, []); byLetter.get(it.letter).push(it); });
+      let html = '';
+      byLetter.forEach((items, l) => { html += shelf(l, items.map((it) => card(it, { square: true })).join(''), l); });
+      if (!html) { notice(k, 'No music yet', "Music added to the library's Music folder shows up here"); return; }
+      screens[k].querySelector('.shelves-inner').innerHTML = html;
+      focusOn(k, keep);
+    });
+    if (current === name) paint();
+  }
+
+  async function openArtist(artist) {
+    LIB.artist = artist;
+    screens.artist.querySelector('[data-artist-name]').textContent = artist.name;
+    pos.artist = { r: 0, c: [] };
+    notice('artist', 'Loading…', artist.name); show('artist');
+    let data;
+    try { data = await getJSON('/local/music_artist/' + artist.id); }
+    catch (e) { notice('artist', "Jellyfin isn't answering", 'Try again in a moment'); return; }
+    if (LIB.artist !== artist) return;
+    if (!data.albums.length) { notice('artist', 'No songs here', artist.name); return; }
+    const songs = data.albums.reduce((n, a) => n + (a.count || 0), 0);
+    const all = { id: artist.id, type: 'ShuffleArtist', name: '♥ Shuffle ' + artist.name, count: songs };
+    const radio = { id: 'artist:' + artist.id, type: 'Station', name: artist.name + ' radio', sub: 'their songs, and ones that go with them' };
+    screens.artist.querySelector('.shelves-inner').innerHTML =
+      shelf(data.albums.length === 1 ? 'Album' : 'Albums',
+            [card(all, { square: true, key: 'shuffle-artist' }), card(radio, { square: true, kicker: 'RADIO', cls: 'station', key: 'artist-radio' })]
+              .concat(data.albums.map((it) => card(it, { square: true, key: 'ar-' + it.id }))).join(''));
+    if (current === 'artist') paint();
+  }
+
+  // A podcast's episodes, newest first, one shelf per year
+  async function openPodcast(podcast, quiet) {
+    LIB.podcast = podcast;
+    screens.podcast.querySelector('[data-podcast-name]').textContent = podcast.title;
+    if (!quiet) { pos.podcast = { r: 0, c: [] }; notice('podcast', 'Loading…', podcast.title); show('podcast'); }
+    let data;
+    try { data = await getJSON('/local/podcast/' + podcast.id); }
+    catch (e) { if (!quiet) notice('podcast', "The podcast isn't answering", 'Try again in a moment'); return; }
+    if (LIB.podcast !== podcast) return;
+    if (!data.episodes.length) { notice('podcast', 'No episodes yet', podcast.title); return; }
+    const keep = focusedId('podcast');
+    const years = new Map();
+    data.episodes.forEach((ep) => {
+      const y = (ep.date || '').slice(0, 4) || 'Episodes';
+      if (!years.has(y)) years.set(y, []);
+      years.get(y).push({ ...ep, name: ep.title, runtime: ep.duration });
+    });
+    let html = '';
+    years.forEach((eps, y) => { html += shelf(y, eps.map((ep) => card(ep, { wide: true, cls: 'episode' })).join('')); });
+    screens.podcast.querySelector('.shelves-inner').innerHTML = html;
+    if (keep) focusOn('podcast', keep);
+    if (current === 'podcast') paint();
+  }
+
+  function jumpToLetter(ch) {           // a letter typed on the remote's keyboard
+    const want = /[0-9]/.test(ch) ? '#' : ch.toUpperCase();
+    const shelves = [...screens[current].querySelectorAll('.shelf')];
+    let r = shelves.findIndex((sh) => sh.dataset.letter >= want);
+    if (r < 0) r = shelves.length - 1;
+    pos[current].r = r; pos[current].c[r] = 0;
+  }
+
+  function songs(n) { return n === 1 ? '1 song' : `${(n || 0).toLocaleString('en-US')} songs`; }
+
+  function detailFor(it) {
+    if (!it) return '';
+    if (it.type === 'NowPlaying') return NP.track ? `<b>Now playing</b> · ${esc(NP.track.title)}` + (NP.track.artist ? ` — ${esc(NP.track.artist)}` : '') + ' · OK to see it' : '<b>Now playing</b>';
+    if (it.type === 'ShuffleAll') return '<b>Shuffle all my music</b> · ' + (LIB.songs ? `all ${songs(LIB.songs)}, in random order` : 'every song, in random order');
+    if (it.type === 'MusicNav') return `<b>${esc(it.name)}</b> · ▲ ▼ moves by letter · type a letter on the remote to jump`;
+    if (it.type === 'MusicArtist') return `<b>${esc(it.name)}</b>`;
+    if (it.type === 'ShuffleArtist') return `<b>${esc(it.name.replace(/^♥ /, ''))}</b> · ${songs(it.count)}, in random order`;
+    if (it.type === 'MusicAlbum') return [`<b>${esc(it.name)}</b>`, esc(it.artist), it.year, it.count ? songs(it.count) : ''].filter(Boolean).join(' · ');
+    if (it.type === 'Station') return [`<b>${esc(it.name)}</b>`, esc(it.sub), 'plays on and on'].filter(Boolean).join(' · ');
+    if (it.type === 'Playlist') return `<b>${esc(it.name)}</b> · from iTunes · ${songs(it.count)}`;
+    if (it.type === 'MyPlaylist') return `<b>${esc(it.name)}</b> · my playlist · ${songs(it.count)}`;
+    if (it.type === 'PodcastShow') return [`<b>${esc(it.title)}</b>`, esc(it.author), it.new ? `${it.new} new` : ''].filter(Boolean).join(' · ');
+    if (it.type === 'PodcastEpisode') {
+      const d = it.date ? new Date(it.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      return [`<b>${esc(it.title)}</b>`, d, it.duration ? length(it.duration) : '',
+              it.resume ? `resume from ${clock(it.resume)}` : (it.played ? 'played' : '')].filter(Boolean).join(' · ');
+    }
+    const bits = [];
+    if (it.type === 'Episode') {
+      bits.push(`<b>${esc(it.series || it.name)}</b>`, esc(epTag(it)));
+      if (it.series) bits.push(esc(it.name));
+    } else {
+      bits.push(`<b>${esc(it.name)}</b>`);
+      if (it.year) bits.push(it.year);
+    }
+    if (it.type === 'Series') { if (it.unplayed) bits.push(`${it.unplayed} unwatched`); }
+    else if (it.runtime) bits.push(length(it.runtime));
+    if (it.resume) bits.push(`resume from ${clock(it.resume)}`);
+    else if (it.played) bits.push('watched');
+    return bits.join(' · ');
+  }
+
+  function paintGrid(name) {
+    const root = screens[name], p = pos[name];
+    const shelves = [...root.querySelectorAll('.shelf')];
+    root.querySelectorAll('.card.focus').forEach((c) => c.classList.remove('focus'));
+    if (!shelves.length) return;
+    p.r = Math.max(0, Math.min(p.r, shelves.length - 1));
+    const sh = shelves[p.r], cards = [...sh.querySelectorAll('.card')];
+    const c = Math.max(0, Math.min(p.c[p.r] || 0, cards.length - 1));
+    p.c[p.r] = c;
+    const el = cards[c];
+    el.classList.add('focus');
+    // sideways: scroll just enough to keep the focused poster (and its ring) in view
+    const row = sh.querySelector('.row'), vp = sh.querySelector('.viewport');
+    let x = +(row.dataset.x || 0);
+    const pad = 30, left = el.offsetLeft - pad, right = el.offsetLeft + el.offsetWidth + pad;
+    if (right > x + vp.clientWidth) x = right - vp.clientWidth;
+    if (left < x) x = left;
+    x = Math.max(0, Math.min(x, row.scrollWidth - vp.clientWidth));
+    row.dataset.x = x;
+    row.style.transform = `translateX(${-x}px)`;
+    // down the page: the focused shelf rides to the top
+    root.querySelector('.shelves-inner').style.transform = `translateY(${-sh.offsetTop}px)`;
+    root.querySelector('[data-detail]').innerHTML = detailFor(LIB.items[el.dataset.id]);
+  }
+
+  function root_unfocus() { screens[current].querySelectorAll('.card.focus, .tile.focus').forEach((c) => c.classList.remove('focus')); }
+  function gridKey(e) {
+    const p = pos[current];
+    const shelves = [...screens[current].querySelectorAll('.shelf')];
+    if (e.key === 'Escape' || e.key === 'Backspace' || (e.altKey && e.key === 'ArrowLeft')) {
+      e.preventDefault();
+      show(BACK[current] || 'home');
+      return;
+    }
+    if (!shelves.length) return;
+    const n = shelves[p.r].querySelectorAll('.card').length, c = p.c[p.r] || 0;
+    if (AZ[current] && e.key.length === 1 && /[a-z0-9]/i.test(e.key) && !e.ctrlKey && !e.altKey) jumpToLetter(e.key);
+    else if (e.key === 'ArrowRight') p.c[p.r] = AZ[current] && c === n - 1 ? 0 : Math.min(n - 1, c + 1);
+    else if (e.key === 'ArrowLeft' && c === 0 && dockable()) { DOCK.focus = true; e.preventDefault(); paintDock(); root_unfocus(); return; }
+    else if (e.key === 'ArrowLeft') p.c[p.r] = AZ[current] && c === 0 ? n - 1 : Math.max(0, c - 1);
+    else if (e.key === 'ArrowDown') p.r = Math.min(shelves.length - 1, p.r + 1);
+    else if (e.key === 'ArrowUp') p.r = Math.max(0, p.r - 1);
+    else if (e.key === 'Enter') { const id = focusedId(current); if (id) choose(LIB.items[id]); e.preventDefault(); return; }
+    else return;
+    e.preventDefault(); paint();
+  }
+
+  // Enter on a poster: a show opens its episodes; a movie/episode plays (asking first if it's half-watched)
+  const chooser = { el: document.getElementById('chooser'), item: null, idx: 0 };
+  function choose(it) {
+    if (!it) return;
+    if (it.type === 'Series') { openShow(it); return; }
+    if (it.type === 'NowPlaying') { openNowPlaying(); return; }
+    if (it.type === 'MusicNav') { openMusic(it.go); return; }
+    if (it.type === 'MusicArtist') { openArtist(it); return; }
+    if (it.type === 'ShuffleArtist') { playMusic({ artist: it.id, shuffle: true }, it.name.replace(/^♥ Shuffle /, '')); return; }
+    // An album, a playlist or a station opens as a page: Play all, Shuffle, or a song
+    if (it.type === 'MusicAlbum') { openList({ kind: 'album', id: it.id, ids: it.ids || [it.id], songs: it.songs || [], title: it.name }); return; }
+    if (it.type === 'Station') { openList({ kind: 'station', id: it.id, title: it.name }); return; }
+    if (it.type === 'Playlist') { openList({ kind: 'playlist', id: it.id.replace(/^playlist:/, ''), title: it.name }); return; }
+    if (it.type === 'MyPlaylist') { openList({ kind: 'mine', id: it.id, title: it.name }); return; }
+    if (it.type === 'ShuffleAll') { playMusic({ everything: true }, 'all your music'); return; }
+    if (it.type === 'PodcastShow') { openPodcast(it); return; }
+    if (it.resume) {
+      chooser.item = it; chooser.idx = 0;
+      chooser.el.querySelector('.ctitle').textContent = it.type === 'Episode' && it.series ? `${it.series} · ${epTag(it)}` : it.name;
+      chooser.el.querySelector('[data-c="resume"]').textContent = 'Resume from ' + clock(it.resume);
+      chooser.el.hidden = false; paintChooser();
+      return;
+    }
+    play(it, 0);
+  }
+  function paintChooser() { chooser.el.querySelectorAll('.choice').forEach((b, i) => b.classList.toggle('focus', i === chooser.idx)); }
+  function closeChooser() { chooser.el.hidden = true; chooser.item = null; }
+  function chooserKey(e) {
+    e.preventDefault();
+    if (e.key === 'ArrowLeft' && !e.altKey) chooser.idx = 0;
+    else if (e.key === 'ArrowRight') chooser.idx = 1;
+    else if (e.key === 'Enter') { const it = chooser.item; const resume = chooser.idx === 0; closeChooser(); play(it, resume ? it.resume : 0); return; }
+    else if (e.key === 'Escape' || e.key === 'Backspace' || (e.altKey && e.key === 'ArrowLeft')) { closeChooser(); return; }
+    paintChooser();
+  }
+
+  async function playRadio(what, label) {
+    NP.away = false;
+    toast('Playing ' + label + '…');
+    try {
+      const r = await fetch('/local/play_radio', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                                   body: JSON.stringify(what) });
+      if (!r.ok) throw new Error(r.status);
+      setTimeout(status, 1200);
+    } catch (e) { toast("Couldn't start it, Jellyfin isn't answering"); }
+  }
+
+  async function playMusic(what, label) {
+    NP.away = false;
+    toast('Playing ' + label + '…');
+    try {
+      const r = await fetch('/local/play_music', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                                   body: JSON.stringify(what) });
+      if (!r.ok) throw new Error(r.status);
+      setTimeout(status, 1200);
+    } catch (e) { toast("Couldn't start it, Jellyfin isn't answering"); }
+  }
+
+  // Now Playing: shown while the TV plays a music queue; the bar runs between polls.
+  // away: Back left Now Playing with the music still going; the Music shelf's
+  // ♪ Now playing card brings it back. queue/cursor: the whole
+  // list under the song, ▲ ▼ to browse it, OK to play the one picked.
+  const NP = { el: document.getElementById('music'), track: null, pos: 0, dur: 0, paused: false, at: 0, back: 'home',
+               away: false, queue: null, cursor: null, follow: true, keyAt: 0 };
+  function openNowPlaying() {
+    NP.away = false; NP.follow = true;
+    if (current !== 'music') NP.back = current;
+    show('music'); fetchQueue();
+  }
+  async function fetchQueue() {
+    try {
+      const q = await getJSON('/local/music_queue');
+      NP.queue = q;
+      if (NP.follow || NP.cursor == null || NP.cursor >= q.items.length) NP.cursor = q.index;
+      renderQueue();
+    } catch (e) {}
+  }
+  const QROWS = 7;
+  function renderQueue() {
+    const q = NP.queue, box = NP.el.querySelector('.np-queue'), np = NP.el.querySelector('.np');
+    const visible = !!(q && q.items.length > 1 && NP.track && NP.track.kind !== 'podcast');
+    np.classList.toggle('with-queue', visible);
+    if (!visible) { box.innerHTML = ''; return; }
+    const n = q.items.length, cur = NP.cursor == null ? q.index : NP.cursor;
+    let first = Math.max(0, Math.min(cur - Math.floor(QROWS / 2), n - QROWS));
+    let html = '';
+    for (let i = first; i < Math.min(n, first + QROWS); i++) {
+      const t = q.items[i];
+      const cls = (i === q.index ? ' now' : i < q.index ? ' played' : '') + (i === cur && !NP.follow ? ' cursor' : '') + (t.queued && i > q.index ? ' queued' : '');
+      html += `<div class="qrow${cls}"><span class="qn">${i === q.index ? '♪' : i + 1}</span><span class="qt">${esc(t.title)}</span>`
+            + `<span class="qa">${esc(t.artist || '')}</span><span class="qd">${t.duration ? clock(t.duration) : ''}</span></div>`;
+    }
+    box.innerHTML = html;
+    npKeys();
+  }
+  function npKeys() {
+    const podcast = NP.track && NP.track.kind === 'podcast';
+    const picked = NP.queue && !NP.follow && NP.cursor !== NP.queue.index;
+    NP.el.querySelector('.np-keys').textContent = podcast ? '◀ back 15 s · ▶ ahead 30 s · OK pauses · Back leaves it playing'
+      : picked ? `OK plays song ${NP.cursor + 1} · ▲ ▼ the list · Back leaves it playing`
+      : (NP.queue && NP.queue.items.length > 1 ? '▲ ▼ the list · ◀ ▶ skip · OK pauses · Back leaves it playing'
+                                                : '◀ ▶ skip · OK pauses · Back leaves it playing');
+  }
+  // ------------------------------------------------------------------ Now playing in the header
+  // The Now Playing card stays up on every screen and can be selected: ◀ from
+  // the first card of a row (or the first tile, or a list) lands here; OK opens
+  // Now Playing.
+  const DOCK = { el: document.getElementById('dock'), focus: false, id: null };
+  const dockable = () => !!(NP.track && current !== 'music');
+  function paintDock() {
+    const on = dockable();
+    document.body.classList.toggle('docked', on);
+    if (!on) DOCK.focus = false;
+    DOCK.el.classList.toggle('focus', DOCK.focus);
+    if (!on) return;
+    const t = NP.track;
+    if (DOCK.id !== t.id) {
+      DOCK.id = t.id;
+      DOCK.el.querySelector('.dtitle').textContent = t.title || '';
+      DOCK.el.querySelector('.dartist').textContent = [t.artist, t.radio ? t.station + ' radio' : t.station].filter(Boolean).join(' · ');
+      const art = DOCK.el.querySelector('.dart');
+      art.querySelectorAll('img').forEach((i) => i.remove());
+      const src = t.art ? '/local/podcast_art/' + t.art : (t.image ? `/local/jf_image/${t.image}?w=200` : '');
+      if (src) art.insertAdjacentHTML('beforeend', `<img src="${src}" alt="" onerror="this.remove()">`);
+    }
+    DOCK.el.querySelector('.dkick').textContent = (t.kind === 'podcast' ? 'PODCAST' : 'NOW PLAYING') + (NP.paused ? ' · PAUSED' : '');
+    if (DOCK.focus) {
+      const d = screens[current] && screens[current].querySelector('[data-detail]');
+      if (d) d.innerHTML = `<b>Now playing</b> · ${esc(t.title)}` + (t.artist ? ` — ${esc(t.artist)}` : '') + ' · OK goes back to it · ▶ returns';
+    }
+  }
+  function dockKey(e) {
+    e.preventDefault();
+    if (e.key === 'Enter') { DOCK.focus = false; openNowPlaying(); return; }
+    if (['ArrowRight', 'ArrowDown', 'Escape', 'Backspace'].includes(e.key) || e.altKey) { DOCK.focus = false; paintDock(); paint(); if (current === 'list') renderList(); }
+  }
+
+  // ------------------------------------------------------------------ lists
+  // An album or a playlist opens as a page instead of starting at once: Play
+  // all, Shuffle, or pick a song to start from there. Albums, iTunes playlists,
+  // playlists made here and a station's list for today all open here. ▲ ▼ move,
+  // OK plays, ▶ opens the song's menu, ◀ reaches Now playing in the header.
+  const LIST = { spec: null, data: null, cursor: 0, back: 'jellyfin' };
+  const LROWS = 11;
+  function listQuery(spec) {
+    const q = new URLSearchParams({ kind: spec.kind, id: spec.id });
+    if (spec.ids && spec.ids.length) q.set('ids', spec.ids.join(','));
+    if (spec.songs && spec.songs.length) q.set('songs', spec.songs.join(','));
+    return q.toString();
+  }
+  async function openList(spec) {
+    if (current !== 'list') LIST.back = current;
+    LIST.spec = spec; LIST.data = null; LIST.cursor = 0;
+    const root = screens.list;
+    root.querySelector('[data-list-name]').textContent = spec.title || '';
+    root.querySelector('.lst-rows').innerHTML = '<div class="lrow"><span class="lt">Loading…</span></div>';
+    root.querySelector('.lst-sub').textContent = ''; root.querySelector('.lst-count').textContent = '';
+    root.querySelector('.lst-art').querySelectorAll('img').forEach((i) => i.remove());
+    show('list');
+    let data;
+    try { data = await getJSON('/local/tvapi/list?' + listQuery(spec)); }
+    catch (e) { root.querySelector('.lst-rows').innerHTML = "<div class=\"lrow\"><span class=\"lt\">Couldn't open it, try again in a moment</span></div>"; return; }
+    if (LIST.spec !== spec) return;
+    LIST.data = data;
+    root.querySelector('[data-list-name]').textContent = data.title;
+    root.querySelector('.lst-sub').textContent = data.sub || '';
+    const total = data.items.reduce((n, t) => n + (t.duration || 0), 0);
+    root.querySelector('.lst-count').textContent = songs(data.items.length) + (total ? ' · ' + length(total) : '');
+    if (data.image) root.querySelector('.lst-art').insertAdjacentHTML('beforeend', `<img src="/local/jf_image/${data.image}?w=600" alt="" onerror="this.remove()">`);
+    renderList();
+  }
+  const listRows = () => 2 + (LIST.data ? LIST.data.items.length : 0);
+  function renderList() {
+    const d = LIST.data;
+    if (!d) return;
+    const n = listRows(), cur = Math.max(0, Math.min(LIST.cursor, n - 1));
+    LIST.cursor = cur;
+    const first = Math.max(0, Math.min(cur - Math.floor(LROWS / 2), n - LROWS));
+    let html = '';
+    for (let r = first; r < Math.min(n, first + LROWS); r++) {
+      const focus = r === cur && !DOCK.focus ? ' focus' : '';
+      if (r === 0) html += `<div class="lrow act${focus}"><span class="ln">▶</span><span class="lt">Play all</span></div>`;
+      else if (r === 1) html += `<div class="lrow act${focus}"><span class="ln">⤮</span><span class="lt">Shuffle</span></div>`;
+      else {
+        const t = d.items[r - 2];
+        html += `<div class="lrow${focus}${t.disliked ? ' disliked' : ''}"><span class="ln">${d.kind === 'album' && t.number ? t.number : r - 1}</span>`
+              + `<span class="lt">${esc(t.title)}</span><span class="lh">${t.loved ? '♥' : ''}</span>`
+              + `<span class="la">${esc(t.artist || '')}</span><span class="ld">${t.duration ? clock(t.duration) : ''}</span></div>`;
+      }
+    }
+    screens.list.querySelector('.lst-rows').innerHTML = html;
+    const t = cur >= 2 ? d.items[cur - 2] : null;
+    screens.list.querySelector('[data-detail]').innerHTML = cur === 0 ? '<b>Play all</b> · from the first song'
+      : cur === 1 ? '<b>Shuffle</b> · every song here, in random order'
+      : `<b>${esc(t.title)}</b> · OK plays from here · ▶ Add to queue, ♥, playlists`;
+  }
+  function listKey(e) {
+    if (e.key === 'Escape' || e.key === 'Backspace' || (e.altKey && e.key === 'ArrowLeft')) { e.preventDefault(); show(LIST.back || 'jellyfin'); return; }
+    if (!LIST.data) return;
+    const n = listRows();
+    if (e.key === 'ArrowDown') LIST.cursor = Math.min(n - 1, LIST.cursor + 1);
+    else if (e.key === 'ArrowUp') LIST.cursor = Math.max(0, LIST.cursor - 1);
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); if (dockable()) { DOCK.focus = true; renderList(); paintDock(); } return; }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); if (LIST.cursor >= 2) openSongMenu(LIST.data.items[LIST.cursor - 2]); return; }
+    else if (e.key === 'Enter') { e.preventDefault(); playList(LIST.cursor === 1, Math.max(0, LIST.cursor - 2)); return; }
+    else return;
+    e.preventDefault(); renderList();
+  }
+  async function postLocal(path, body) {
+    const r = await fetch('/local/tvapi/' + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r.ok) throw new Error(r.status);
+    return r.json();
+  }
+  async function playList(shuffle, start) {
+    const s = LIST.spec;
+    NP.away = false;
+    toast((shuffle ? 'Shuffling ' : 'Playing ') + (LIST.data.title || '') + '…');
+    try {
+      await postLocal('list/play', { kind: s.kind, id: s.id, ids: s.ids || [], songs: s.songs || [], start, shuffle });
+      setTimeout(status, 1200);
+    } catch (e) { toast("Couldn't start it, Jellyfin isn't answering"); }
+  }
+
+  // ------------------------------------------------------------------ a song's menu
+  // Play next, Add to queue, ♥ / Not for me, and Add to a playlist (or a new one)
+  const MENU = { el: document.getElementById('songmenu'), song: null, opts: [], idx: 0, mode: 'main', playlists: [] };
+  function openSongMenu(song) { MENU.song = song; MENU.mode = 'main'; MENU.idx = 0; buildMenu(); MENU.el.hidden = false; }
+  function closeMenu() {
+    const input = MENU.el.querySelector('.mname');
+    input.hidden = true; input.blur();
+    MENU.el.hidden = true;
+    if (current === 'list') renderList();
+  }
+  function buildMenu() {
+    const t = MENU.song, el = MENU.el, input = el.querySelector('.mname');
+    el.querySelector('.mtitle').textContent = t.title;
+    el.querySelector('.msub').textContent = [t.artist, t.album].filter(Boolean).join(' · ');
+    input.hidden = MENU.mode !== 'name';
+    if (MENU.mode === 'main') {
+      MENU.opts = [['next', 'Play next'], ['queue', 'Add to queue'],
+                   [t.loved ? 'unlove' : 'love', t.loved ? '♥ Loved (OK to unlove)' : '♡ Love'],
+                   [t.disliked ? 'undislike' : 'dislike', t.disliked ? 'Undo “Not for me”' : 'Not for me'],
+                   ['playlists', 'Add to a playlist…']];
+      el.querySelector('.mhint').textContent = '▲ ▼ choose · OK · Back closes';
+    } else if (MENU.mode === 'playlists') {
+      MENU.opts = MENU.playlists.map((p) => ['add:' + p.id, p.name]).concat([['new', '+ New playlist…']]);
+      el.querySelector('.mhint').textContent = 'Which playlist? · Back returns';
+    } else {
+      MENU.opts = [];
+      input.value = '';
+      setTimeout(() => input.focus(), 50);
+      el.querySelector('.mhint').textContent = "Type a name in the remote's keyboard box, then OK · Back cancels";
+    }
+    paintMenu();
+  }
+  function paintMenu() {
+    MENU.el.querySelector('.mopts').innerHTML = MENU.opts.map(([, label], i) => `<div class="mopt${i === MENU.idx ? ' focus' : ''}">${esc(label)}</div>`).join('');
+  }
+  function menuKey(e) {
+    if (MENU.mode === 'name') {          // letters go into the name box
+      if (e.key === 'Enter') { e.preventDefault(); const name = MENU.el.querySelector('.mname').value.trim(); if (name) menuDo('create', name); }
+      else if (e.key === 'Escape' || (e.altKey && e.key === 'ArrowLeft')) { e.preventDefault(); MENU.mode = 'playlists'; MENU.idx = 0; buildMenu(); }
+      return;
+    }
+    e.preventDefault();
+    if (e.key === 'ArrowDown') MENU.idx = Math.min(MENU.opts.length - 1, MENU.idx + 1);
+    else if (e.key === 'ArrowUp') MENU.idx = Math.max(0, MENU.idx - 1);
+    else if (e.key === 'Escape' || e.key === 'Backspace' || e.key === 'ArrowLeft') {
+      if (MENU.mode === 'playlists') { MENU.mode = 'main'; MENU.idx = 4; buildMenu(); } else closeMenu();
+      return;
+    } else if (e.key === 'Enter') { menuDo(MENU.opts[MENU.idx][0]); return; }
+    paintMenu();
+  }
+  async function menuDo(action, name) {
+    const t = MENU.song;
+    try {
+      if (action === 'next' || action === 'queue') {
+        const r = await postLocal('queue', { song: t.id, mode: action });
+        NP.away = NP.away || current !== 'music';
+        toast(r.started ? 'Playing ' + t.title : action === 'next' ? t.title + ' plays next' : 'Added to the queue: ' + t.title);
+        closeMenu(); setTimeout(() => { status(); fetchQueue(); }, 700);
+      } else if (['love', 'unlove', 'dislike', 'undislike'].includes(action)) {
+        const r = await postLocal('song/feedback', { song: t.id, kind: action });
+        t.loved = r.loved; t.disliked = r.disliked;
+        toast({ love: '♥ Loved. Old favorites will play it more', unlove: 'Not loved any more',
+                dislike: "Not for me. It won't come up on the radio again", undislike: 'Back on the radio' }[action]);
+        closeMenu();
+      } else if (action === 'playlists') {
+        MENU.playlists = (await getJSON('/local/tvapi/playlists')).playlists;
+        MENU.mode = 'playlists'; MENU.idx = 0; buildMenu();
+      } else if (action === 'new') { MENU.mode = 'name'; buildMenu(); }
+      else if (action === 'create') {
+        const r = await postLocal('playlists', { name, songs: [t.id] });
+        toast('Made ' + r.name + ', with ' + t.title); closeMenu();
+      } else if (action.startsWith('add:')) {
+        const pid = action.slice(4);
+        await postLocal('playlists/' + pid + '/add', { songs: [t.id] });
+        toast('Added to ' + ((MENU.playlists.find((p) => p.id === pid) || {}).name || 'the playlist')); closeMenu();
+      }
+    } catch (e) { toast("Couldn't do that just now"); }
+  }
+
+  setInterval(() => {      // a quiet minute with the list scrolled away: back to the song playing
+    if (!NP.follow && Date.now() - NP.keyAt > 20000) { NP.follow = true; if (NP.queue) { NP.cursor = NP.queue.index; renderQueue(); } }
+  }, 2000);
+  function npRender(m, p) {
+    const t = m.track, el = NP.el;
+    if (!NP.track || NP.track.id !== t.id || (NP.queue && NP.queue.index !== m.index) || (NP.queue && NP.queue.items.length !== m.count))
+      setTimeout(fetchQueue, 0);        // a new song or a longer queue: refresh the list
+    if (!NP.track || NP.track.id !== t.id) {
+      const art = el.querySelector('.np-art');
+      art.querySelectorAll('img').forEach((i) => i.remove());
+      const src = t.art ? '/local/podcast_art/' + t.art : (t.image ? `/local/jf_image/${t.image}?w=800` : '');
+      if (src) art.insertAdjacentHTML('beforeend', `<img src="${src}" alt="" onerror="this.remove()">`);
+      el.querySelector('.np-title').textContent = t.title;
+      el.querySelector('.np-artist').textContent = t.artist || '';
+      el.querySelector('.np-album').textContent = t.album || '';
+    }
+    NP.track = t;
+    const podcast = t.kind === 'podcast';
+    const count = `Song ${(m.index + 1).toLocaleString('en-US')} of ${m.count.toLocaleString('en-US')}`;
+    const kicker = podcast ? 'Podcast' : t.radio ? esc(t.station) + ' · radio' : t.station ? esc(t.station) + ' · ' + count : count;
+    el.querySelector('.np-kicker').innerHTML = kicker + (p.paused ? '<span class="np-paused">Paused</span>' : '');
+    el.querySelector('.np-next').innerHTML = podcast ? '' : m.next ? `Up next: <b>${esc(m.next.title)}</b>` + (m.next.artist ? ` · ${esc(m.next.artist)}` : '') : 'Last song';
+    npKeys();
+    NP.pos = p.position || 0; NP.dur = p.duration || t.duration || 0; NP.paused = !!p.paused; NP.at = Date.now();
+    npTick();
+    paintDock();
+  }
+  function npTick() {
+    if (current !== 'music' || !NP.track) return;
+    const pos = Math.min(NP.dur || Infinity, NP.pos + (NP.paused ? 0 : (Date.now() - NP.at) / 1000));
+    NP.el.querySelector('.np-bar i').style.width = NP.dur ? (100 * pos / NP.dur).toFixed(2) + '%' : '0';
+    NP.el.querySelector('.np-pos').textContent = clock(pos);
+    NP.el.querySelector('.np-dur').textContent = clock(NP.dur);
+  }
+  setInterval(npTick, 500);
+  function musicKey(e) {
+    let action = null, index;
+    const q = NP.queue, podcast = NP.track && NP.track.kind === 'podcast';
+    if (e.key === 'Escape' || e.key === 'Backspace' || (e.altKey && e.key === 'ArrowLeft')) {
+      // Back leaves the music playing (it used to stop it): browse, pick
+      // something else, or come back by the Music shelf's ♪ Now playing card.
+      e.preventDefault();
+      NP.away = true; NP.follow = true;
+      const to = NP.back && NP.back !== 'music' ? NP.back : 'jellyfin';
+      if (to === 'jellyfin') openLibrary(); else show(to);
+      return;
+    }
+    if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && q && q.items.length > 1 && !podcast) {
+      e.preventDefault();
+      const from = NP.cursor == null ? q.index : NP.cursor;
+      NP.cursor = Math.max(0, Math.min(q.items.length - 1, from + (e.key === 'ArrowDown' ? 1 : -1)));
+      NP.follow = NP.cursor === q.index; NP.keyAt = Date.now();
+      renderQueue();
+      return;
+    }
+    if (e.key === 'Enter' || e.key === ' ') {
+      if (q && !NP.follow && NP.cursor != null && NP.cursor !== q.index) { action = 'jump'; index = NP.cursor; NP.follow = true; }
+      else action = 'toggle';
+    }
+    else if (e.key === 'ArrowRight') action = podcast ? 'forward' : 'next';
+    else if (e.key === 'ArrowLeft' && !e.altKey) action = podcast ? 'rewind' : 'previous';
+    if (!action) return;
+    e.preventDefault();
+    if (action === 'next' || action === 'previous') NP.follow = true;
+    fetch('/local/music_control', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ action, index }) }).then(() => setTimeout(() => { status(); fetchQueue(); }, 400));
+  }
+
+  async function play(it, start) {
+    toast('Starting ' + (it.type === 'Episode' && it.series ? `${it.series} ${epTag(it)}` : it.name) + '…');
+    if (it.type === 'PodcastEpisode') {
+      NP.away = false;
+      try {
+        const r = await fetch('/local/play_podcast', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                                       body: JSON.stringify({ episode: it.id, from_start: !start }) });
+        if (!r.ok) throw new Error(r.status);
+        setTimeout(status, 1200);
+      } catch (e) { toast("Couldn't start it, the podcast isn't answering"); }
+      return;
+    }
+    try {
+      const r = await fetch('/local/play_library', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                                     body: JSON.stringify({ id: it.id, start: start || 0 }) });
+      if (!r.ok) throw new Error(r.status);
+    } catch (e) { toast("Couldn't start it, Jellyfin isn't answering"); }
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (!MENU.el.hidden) { menuKey(e); return; }
+    if (DOCK.focus) { dockKey(e); return; }
+    if (current === 'music') { musicKey(e); return; }
+    if (!chooser.el.hidden) { chooserKey(e); return; }
+    if (current === 'list') { listKey(e); return; }
+    if (GRID[current]) { gridKey(e); return; }
+    const n = tiles().length;
+    if (e.key === 'ArrowLeft' && !e.altKey && focusIdx[current] === 0 && dockable()) { e.preventDefault(); DOCK.focus = true; paintDock(); root_unfocus(); return; }
+    if (e.key === 'ArrowRight') focusIdx[current] = Math.min(n - 1, focusIdx[current] + 1);
+    else if (e.key === 'ArrowLeft' && !e.altKey) focusIdx[current] = Math.max(0, focusIdx[current] - 1);
+    else if (e.key === 'Enter') { activate(tiles()[focusIdx[current]]); return; }
+    else if ((e.key === 'Escape' || e.key === 'Backspace' || (e.altKey && e.key === 'ArrowLeft')) && current !== 'home') { e.preventDefault(); show('home'); return; }
+    else return;
+    e.preventDefault(); paint();
+  });
+  document.querySelectorAll('.tile').forEach((t) => t.addEventListener('click', () => activate(t)));
+  document.addEventListener('click', (e) => {
+    const c = e.target.closest('.card');
+    if (!c || !GRID[current]) return;
+    const sh = c.closest('.shelf'), shelves = [...screens[current].querySelectorAll('.shelf')];
+    pos[current].r = shelves.indexOf(sh);
+    pos[current].c[pos[current].r] = [...sh.querySelectorAll('.card')].indexOf(c);
+    paint(); choose(LIB.items[c.dataset.id]);
+  });
+  chooser.el.addEventListener('click', (e) => {
+    const b = e.target.closest('.choice');
+    if (!b) { closeChooser(); return; }
+    const it = chooser.item; closeChooser(); play(it, b.dataset.c === 'resume' ? it.resume : 0);
+  });
+
+  function tick() {
+    const d = new Date();
+    document.querySelectorAll('[data-time]').forEach((el) => el.textContent = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }));
+    document.querySelectorAll('[data-date]').forEach((el) => el.textContent = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }));
+  }
+  tick(); setInterval(tick, 5000);
+
+  // An Android app on its way: each step with its own clock, against how long
+  // it usually takes, so a hang shows where it is. Between status
+  // calls the active step's clock keeps counting here.
+  const DROID = { data: null, at: 0, timer: null };
+  function mmss(sec) { sec = Math.max(0, Math.floor(sec)); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }
+  function droidPaint() {
+    const box = document.getElementById('droid'), d = DROID.data;
+    if (!d || !(d.steps || []).length) { box.hidden = true; return; }
+    const extra = (Date.now() - DROID.at) / 1000;
+    const title = d.app ? 'Opening ' + d.app : (d.state === 'restarting' ? 'Getting Android ready' : 'Opening the app');
+    let html = '<div class="head"><span>' + esc(title) + '</span><span class="clock">' + mmss((d.elapsed || 0) + extra) + '</span></div>';
+    d.steps.forEach((st) => {
+      const active = st.status === 'active';
+      const secs = st.secs + (active ? extra : 0);
+      const mark = st.status === 'done' ? '✓' : (st.status === 'failed' ? '✗' : '●');
+      html += '<div class="step ' + st.status + '"><span class="mark">' + mark + '</span><span class="name">' + esc(st.label) +
+              '</span><span class="secs">' + mmss(secs) + '</span></div>';
+      if (active) {
+        const slow = secs > st.usual * 1.5 + 5;
+        html += '<div class="bar' + (slow ? ' slow' : '') + '"><i style="width:' + Math.min(100, 100 * secs / Math.max(1, st.usual)) + '%"></i></div>' +
+                '<div class="usual">' + (slow ? 'Taking longer than its usual ' + mmss(st.usual) : 'Usually about ' + mmss(st.usual)) + '</div>';
+      }
+    });
+    if (d.note) html += '<div class="note">' + esc(d.note) + '</div>';
+    html += '<div class="foot">Home stops it.</div>';
+    box.innerHTML = html;
+    box.hidden = false;
+  }
+  function droidShow(d) {
+    DROID.data = d; DROID.at = Date.now();
+    if (d && (d.steps || []).length) {
+      document.getElementById('toast').classList.remove('on');
+      if (!DROID.timer) DROID.timer = setInterval(droidPaint, 1000);
+    } else if (DROID.timer) { clearInterval(DROID.timer); DROID.timer = null; }
+    droidPaint();
+  }
+
+  let wasPlaying = false;
+  async function status() {
+    try {
+      const s = await (await fetch('/local/status')).json();
+      const droid = s.android && s.android.state;
+      if (OPENING.name && droid && droid !== OPENING.state) OPENING.state = droid;
+      droidShow(s.android);
+      // back from the player: fresh resume bars and watched marks
+      const playing = !!(s.player && s.player.active);
+      if (wasPlaying && !playing) {
+        if (current === 'jellyfin') openLibrary(true);
+        if (current === 'show' && LIB.series) { openShow(LIB.series, true); openLibrary(true); }
+        if (current === 'podcast' && LIB.podcast) { openPodcast(LIB.podcast, true); openLibrary(true); }
+      }
+      wasPlaying = playing;
+      if (s.music && playing) {
+        if (current !== 'music' && !NP.away) { NP.back = current; show('music'); fetchQueue(); }
+        npRender(s.music, s.player);
+      } else {
+        NP.away = false; NP.queue = null; NP.cursor = null; NP.follow = true;
+        if (current === 'music') { NP.track = null; show(NP.back || 'home'); }
+        else NP.track = null;
+        paintDock();
+      }
+    } catch (e) {}
+  }
+  (function loop() { status().finally(() => setTimeout(loop, current === 'music' || DROID.data || OPENING.name ? 1500 : 5000)); })();
+
+  if (location.hash === '#streaming') show('streaming');
+  else if (location.hash === '#jellyfin') openLibrary();
+  else show('home');
+</script>
+</body>
+</html>

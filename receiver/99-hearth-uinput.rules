@@ -1,0 +1,5 @@
+# Hearth: the receiver's virtual keyboard + mouse (python-evdev UInput) need
+# /dev/uinput writable by the `input` group (the unit adds that group).
+# Install: sudo cp 99-hearth-uinput.rules /etc/udev/rules.d/ && sudo udevadm control --reload-rules
+#          && sudo udevadm trigger --subsystem-match=misc   (or reboot)
+KERNEL=="uinput", SUBSYSTEM=="misc", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"

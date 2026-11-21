@@ -1,0 +1,16 @@
+# secrets and local config
+.env
+receiver/config.json
+# runtime data: play history, favorites, resume points, uploads, VAPID key, logs
+hearth/data/
+logs/
+# Music Flamingo's working files (decoded audio, descriptions, embeddings)
+flamingo/audio/
+flamingo/out/
+flamingo/manifest.json
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/

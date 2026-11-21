@@ -1,0 +1,10 @@
+# The GPU box's venv for flamingo/listen.py (a CUDA build of torch for your card first:
+# https://pytorch.org/get-started/locally/). Tested with torch 2.14 + transformers 5.17;
+# any transformers release that has AudioFlamingo3ForConditionalGeneration should do.
+torch
+transformers>=5.0
+accelerate
+soundfile
+numpy
+# prepare_audio.py runs on the media server and needs only: requests (+ ffmpeg, rsync)
+requests

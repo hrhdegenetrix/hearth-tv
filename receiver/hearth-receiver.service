@@ -1,0 +1,27 @@
+# Template: deploy.sh fills in @USER@, @GROUP@, @HOME@ and @UID@ for the Pi's
+# desktop user (the one the screen autologs in as) and installs it as
+# /etc/systemd/system/hearth-receiver.service.
+[Unit]
+Description=Hearth receiver (mpv + kiosk Chromium + remote input)
+After=network-online.target lightdm.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@USER@
+Group=@GROUP@
+SupplementaryGroups=input
+WorkingDirectory=@HOME@/hearth
+# The kiosk browser and mpv live on the autologin labwc session's Wayland socket.
+ExecStartPre=/bin/sh -c 'for i in $(seq 90); do [ -S /run/user/@UID@/wayland-0 ] && exit 0; sleep 1; done; exit 1'
+ExecStart=/usr/bin/python3 @HOME@/hearth/receiver.py
+Restart=always
+RestartSec=3
+# Leave the browser running across receiver restarts (a redeploy shouldn't
+# drop a streaming episode); mpv orphans are reaped by pidfile on start.
+KillMode=process
+Environment=PYTHONUNBUFFERED=1
+Environment=XDG_RUNTIME_DIR=/run/user/@UID@
+
+[Install]
+WantedBy=graphical.target
